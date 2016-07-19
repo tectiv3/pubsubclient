@@ -5,7 +5,14 @@
 */
 
 #include "PubSubClient.h"
-#include "Arduino.h"
+#if defined(SPARK) || (PLATFORM_ID==88)
+    #include "spark_wiring_string.h"
+    #include "spark_wiring_tcpclient.h"
+    #include "spark_wiring_usbserial.h"
+    #include "application.h"
+#elif defined(ARDUINO)
+    #include <Arduino.h>
+#endif
 
 PubSubClient::PubSubClient() {
     this->_state = MQTT_DISCONNECTED;
@@ -348,15 +355,15 @@ boolean PubSubClient::publish(const char* topic, const char* payload) {
     return publish(topic,(const uint8_t*)payload,strlen(payload),false);
 }
 
-boolean PubSubClient::publish(const char* topic, const char* payload, boolean retained) {
-    return publish(topic,(const uint8_t*)payload,strlen(payload),retained);
+boolean PubSubClient::publish(const char* topic, const char* payload, boolean retain) {
+    return publish(topic,(const uint8_t*)payload,strlen(payload),retain);
 }
 
 boolean PubSubClient::publish(const char* topic, const uint8_t* payload, unsigned int plength) {
     return publish(topic, payload, plength, false);
 }
 
-boolean PubSubClient::publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained) {
+boolean PubSubClient::publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retain) {
     if (connected()) {
         if (MQTT_MAX_PACKET_SIZE < 5 + 2+strlen(topic) + plength) {
             // Too long
@@ -370,57 +377,12 @@ boolean PubSubClient::publish(const char* topic, const uint8_t* payload, unsigne
             buffer[length++] = payload[i];
         }
         uint8_t header = MQTTPUBLISH;
-        if (retained) {
+        if (retain) {
             header |= 1;
         }
         return write(header,buffer,length-5);
     }
     return false;
-}
-
-boolean PubSubClient::publish_P(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained) {
-    uint8_t llen = 0;
-    uint8_t digit;
-    unsigned int rc = 0;
-    uint16_t tlen;
-    unsigned int pos = 0;
-    unsigned int i;
-    uint8_t header;
-    unsigned int len;
-
-    if (!connected()) {
-        return false;
-    }
-
-    tlen = strlen(topic);
-
-    header = MQTTPUBLISH;
-    if (retained) {
-        header |= 1;
-    }
-    buffer[pos++] = header;
-    len = plength + 2 + tlen;
-    do {
-        digit = len % 128;
-        len = len / 128;
-        if (len > 0) {
-            digit |= 0x80;
-        }
-        buffer[pos++] = digit;
-        llen++;
-    } while(len>0);
-
-    pos = writeString(topic,buffer,pos);
-
-    rc += _client->write(buffer,pos);
-
-    for (i=0;i<plength;i++) {
-        rc += _client->write((char)pgm_read_byte_near(payload + i));
-    }
-
-    lastOutActivity = millis();
-
-    return rc == tlen + 4 + plength;
 }
 
 boolean PubSubClient::write(uint8_t header, uint8_t* buf, uint16_t length) {

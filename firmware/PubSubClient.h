@@ -6,11 +6,18 @@
 
 #ifndef PubSubClient_h
 #define PubSubClient_h
+#if defined(SPARK) || (PLATFORM_ID==88)
+    #include "spark_wiring_string.h"
+    #include "spark_wiring_tcpclient.h"
+    #include "spark_wiring_usbserial.h"
+    #include "application.h"
+#elif defined(ARDUINO)
+    #include <Arduino.h>
+    #include "IPAddress.h"
+    #include "Client.h"
+    #include "Stream.h"
+#endif
 
-#include <Arduino.h>
-#include "IPAddress.h"
-#include "Client.h"
-#include "Stream.h"
 
 #define MQTT_VERSION_3_1      3
 #define MQTT_VERSION_3_1_1    4
@@ -128,10 +135,9 @@ public:
    boolean connect(const char* id, const char* user, const char* pass, const char* willTopic, uint8_t willQos, boolean willRetain, const char* willMessage);
    void disconnect();
    boolean publish(const char* topic, const char* payload);
-   boolean publish(const char* topic, const char* payload, boolean retained);
+   boolean publish(const char* topic, const char* payload, boolean retain);
    boolean publish(const char* topic, const uint8_t * payload, unsigned int plength);
-   boolean publish(const char* topic, const uint8_t * payload, unsigned int plength, boolean retained);
-   boolean publish_P(const char* topic, const uint8_t * payload, unsigned int plength, boolean retained);
+   boolean publish(const char* topic, const uint8_t * payload, unsigned int plength, boolean retain);
    boolean subscribe(const char* topic);
    boolean subscribe(const char* topic, uint8_t qos);
    boolean unsubscribe(const char* topic);
